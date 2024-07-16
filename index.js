@@ -100,6 +100,32 @@ async function run() {
   });
 
 
+  app.post('/login', async (req, res) => {
+    const { emailOrPhone, pin } = req.body;
+    console.log(emailOrPhone, pin);
+
+    const user = await userCollection.findOne({
+      $or: [{ email: emailOrPhone }, { phoneNumber: emailOrPhone }]
+    });
+
+    if (!user) {
+      return res.status(400).send({ message: 'User not found' });
+    }
+
+    const isPinValid = await bcrypt.compare(pin, user.pin);
+
+    if (!isPinValid) {
+      return res.status(400).send({ message: 'Invalid credentials' });
+    }
+
+    const token = jwt.sign({ userId: user._id, email: user.email }, process.env.ACCESS_TOKEN_SECRET, {
+      expiresIn: '1h',
+    });
+
+    res.send({ token, user });
+  });
+
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
